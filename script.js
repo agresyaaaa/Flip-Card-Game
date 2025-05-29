@@ -57,7 +57,9 @@ function showGameScreen() {
         "cat": "🐱 Kucing",
         "dog": "🐶 Anjing", 
         "flower": "🌸 Bunga",
-        "fruit": "🍎 Buah"
+        "fruit": "🍎 Buah",
+        "spongebob": "🧽 SpongeBob",
+        "upin-ipin": "👫 Upin & Ipin"
     };
     const themeDisplay = document.getElementById("currentThemeDisplay");
     if (themeDisplay) {
@@ -111,6 +113,14 @@ function loadCardImages() {
     } else if (currentTheme === "fruit") {
         for (let i = 1; i <= 8; i++) {
             cardImages.push(`fruit${i}.jpeg`);
+        }
+    } else if (currentTheme === "spongebob") {
+        for (let i = 1; i <= 8; i++) {
+                cardImages.push(`spongebob${i}.jpeg`);
+        }
+    } else if (currentTheme === "upin&ipin") {
+        for (let i = 1; i <= 8; i++) {
+                cardImages.push(`upin${i}.jpeg`);
         }
     }
     
