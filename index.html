@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Memory Card Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Start Screen -->
+    <div id="startScreen" class="screen active">
+        <div class="container">
+            <div class="start-content">
+                <h1 class="main-title">🎮 Mind Matcher Game</h1>
+                <p class="subtitle">Uji kemampuan memori Anda melawan AI!</p>
+                <div class="features">
+                    <div class="feature">🧠 Latih memori</div>
+                    <div class="feature">🤖 Lawan AI</div>
+                    <div class="feature">🎯 Tema menarik</div>
+                </div>
+                <button class="start-btn" onclick="showThemeSelection()">
+                    ✨ Mulai Bermain
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Theme Selection Screen -->
+    <div id="themeScreen" class="screen">
+        <div class="container">
+            <div class="theme-content">
+                <h2>🎨 Pilih Tema Favorit Anda</h2>
+                <div class="theme-grid">
+                    <div class="theme-card" data-theme="cat">
+                        <div class="theme-icon">🐱</div>
+                        <h3>Kucing</h3>
+                        <p>Tema kucing yang menggemaskan</p>
+                    </div>
+                    <div class="theme-card" data-theme="dog">
+                        <div class="theme-icon">🐶</div>
+                        <h3>Anjing</h3>
+                        <p>Tema anjing yang lucu</p>
+                    </div>
+                    <div class="theme-card" data-theme="flower">
+                        <div class="theme-icon">🌸</div>
+                        <h3>Bunga</h3>
+                        <p>Tema bunga yang indah</p>
+                    </div>
+                    <div class="theme-card" data-theme="fruit">
+                        <div class="theme-icon">🍎</div>
+                        <h3>Buah</h3>
+                        <p>Tema buah yang segar</p>
+                    </div>
+                </div>
+                <button class="back-btn" onclick="showStartScreen()">
+                    ← Kembali
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Game Screen -->
+    <div id="gameScreen" class="screen">
+        <div class="container">
+            <div class="game-header">
+                <h1>🎮 Mind Matcher Game</h1>
+                <div class="current-theme">
+                    Tema: <span id="currentThemeDisplay">-</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <div class="score-board">
+                    <div class="score player-score">
+                        👤 You: <span id="playerScore">0</span>
+                    </div>
+                    <div class="score ai-score">
+                        🤖 AI: <span id="aiScore">0</span>
+                    </div>
+                    <div class="current-turn">
+                        Giliran: <span id="turnDisplay">Player</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="game-actions">
+                <button class="action-btn theme-btn" onclick="showThemeSelection()">
+                    🎨 Ganti Tema
+                </button>
+                <button class="action-btn reset-btn" onclick="resetGame()">
+                    🔄 Reset Game
+                </button>
+            </div>
+            
+            <div id="gameBoard"></div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
