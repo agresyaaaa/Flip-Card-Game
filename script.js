@@ -7,6 +7,9 @@ let playerScore = 0;
 let aiScore = 0;
 let currentTheme = "";
 let cardImages = [];
+let timer = 15;
+let timerInterval = null;
+let aiMemory = []; // AI akan mengingat kartu yang pernah dibuka
 
 // DOM Elements
 const startScreen = document.getElementById("startScreen");
@@ -14,6 +17,7 @@ const themeScreen = document.getElementById("themeScreen");
 const gameScreen = document.getElementById("gameScreen");
 const gameBoard = document.getElementById("gameBoard");
 const themeCards = document.querySelectorAll(".theme-card");
+const timerDisplay = document.getElementById("timerDisplay");
 
 // Event Listeners untuk tombol
 document.addEventListener("DOMContentLoaded", function() {
@@ -40,6 +44,7 @@ document.addEventListener("DOMContentLoaded", function() {
 function showStartScreen() {
     hideAllScreens();
     startScreen.classList.add("active");
+    stopTimer();
 }
 
 function showThemeSelection() {
@@ -47,6 +52,7 @@ function showThemeSelection() {
     themeScreen.classList.add("active");
     // Reset tema selection
     themeCards.forEach(card => card.classList.remove("selected"));
+    stopTimer();
 }
 
 function showGameScreen() {
@@ -59,7 +65,7 @@ function showGameScreen() {
         "flower": "🌸 Bunga",
         "fruit": "🍎 Buah",
         "spongebob": "🧽 SpongeBob",
-        "upin-ipin": "👫 Upin & Ipin"
+        "upin&ipin": "👫 Upin & Ipin"
     };
     const themeDisplay = document.getElementById("currentThemeDisplay");
     if (themeDisplay) {
@@ -72,6 +78,66 @@ function hideAllScreens() {
     document.querySelectorAll(".screen").forEach(screen => {
         screen.classList.remove("active");
     });
+}
+
+// Timer Functions
+function startTimer() {
+    timer = 15;
+    updateTimerDisplay();
+    
+    timerInterval = setInterval(() => {
+        timer--;
+        updateTimerDisplay();
+        
+        if (timer <= 5) {
+            timerDisplay.parentElement.classList.add('warning');
+        } else {
+            timerDisplay.parentElement.classList.remove('warning');
+        }
+        
+        if (timer <= 0) {
+            handleTimeUp();
+        }
+    }, 1000);
+}
+
+function stopTimer() {
+    if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+    }
+    timer = 15;
+    updateTimerDisplay();
+    if (timerDisplay && timerDisplay.parentElement) {
+        timerDisplay.parentElement.classList.remove('warning');
+    }
+}
+
+function resetTimer() {
+    stopTimer();
+    startTimer();
+}
+
+function updateTimerDisplay() {
+    if (timerDisplay) {
+        timerDisplay.textContent = timer;
+    }
+}
+
+function handleTimeUp() {
+    stopTimer();
+    
+    // Jika ada kartu yang sedang terbuka, tutup kembali
+    if (firstCard) {
+        if (secondCard) {
+            unflipCards(firstCard, secondCard);
+        } else {
+            unflipCards(firstCard, firstCard);
+        }
+    }
+    
+    // Reset turn dan ganti giliran
+    resetTurn(false);
 }
 
 // Theme Selection Handler
@@ -136,11 +202,13 @@ function createBoard() {
     
     const cards = shuffle(loadCardImages());
     gameBoard.innerHTML = "";
+    aiMemory = []; // Reset AI memory
 
-    cards.forEach((imgName) => {
+    cards.forEach((imgName, index) => {
         const card = document.createElement("div");
         card.classList.add("card");
         card.dataset.image = imgName;
+        card.dataset.index = index;
 
         const img = document.createElement("img");
         img.src = `images/back.jpeg`;
@@ -156,6 +224,11 @@ function playerFlipCard() {
     if (currentPlayer !== "Player") return;
     if (this.classList.contains("flipped")) return;
 
+    // Start timer jika ini kartu pertama yang diklik
+    if (!firstCard && !timerInterval) {
+        startTimer();
+    }
+
     flipCard(this);
 
     if (!firstCard) {
@@ -170,17 +243,38 @@ function flipCard(card) {
     const img = card.querySelector("img");
     img.src = `images/${currentTheme}/${card.dataset.image}`;
     card.classList.add("flipped");
+    
+    // Tambahkan ke memori AI
+    addToAIMemory(card);
+}
+
+function addToAIMemory(card) {
+    const cardInfo = {
+        index: parseInt(card.dataset.index),
+        image: card.dataset.image,
+        position: card
+    };
+    
+    // Cek apakah sudah ada di memori
+    const existingIndex = aiMemory.findIndex(mem => mem.index === cardInfo.index);
+    if (existingIndex === -1) {
+        aiMemory.push(cardInfo);
+    }
 }
 
 function unflipCards(card1, card2) {
     card1.querySelector("img").src = "images/back.jpeg";
-    card2.querySelector("img").src = "images/back.jpeg";
     card1.classList.remove("flipped");
-    card2.classList.remove("flipped");
+    
+    if (card2 && card1 !== card2) {
+        card2.querySelector("img").src = "images/back.jpeg";
+        card2.classList.remove("flipped");
+    }
 }
 
 function checkForMatch() {
     lockBoard = true;
+    stopTimer();
 
     if (firstCard.dataset.image === secondCard.dataset.image) {
         // Kartu cocok
@@ -210,14 +304,19 @@ function resetTurn(stayTurn) {
         // Jika pemain saat ini tetap dapat giliran lagi
         if (currentPlayer === "AI") {
             setTimeout(aiPlay, 1000);
+        } else {
+            // Player mendapat giliran lagi, reset timer
+            resetTimer();
         }
-        // Jika Player yang menang, dia akan bermain lagi secara manual
     } else {
         // Ganti giliran
         currentPlayer = currentPlayer === "Player" ? "AI" : "Player";
         updateStatus();
         if (currentPlayer === "AI") {
             setTimeout(aiPlay, 1000);
+        } else {
+            // Giliran player, mulai timer
+            resetTimer();
         }
     }
 }
@@ -229,8 +328,37 @@ function aiPlay() {
 
     if (unflipped.length < 2) return;
 
-    // AI memilih 2 kartu secara acak
-    const [card1, card2] = shuffle(unflipped).slice(0, 2);
+    let card1, card2;
+
+    // AI Strategy: Coba cari pasangan dari memori
+    const potentialMatches = findPotentialMatches(unflipped);
+    
+    if (potentialMatches.length >= 2) {
+        // AI tahu ada pasangan, ambil yang pertama
+        [card1, card2] = potentialMatches.slice(0, 2);
+    } else if (potentialMatches.length === 1) {
+        // AI tahu satu kartu, coba cari pasangannya
+        card1 = potentialMatches[0];
+        const matchingImage = card1.dataset.image;
+        const possibleMatch = unflipped.find(card => 
+            card !== card1 && 
+            aiMemory.some(mem => mem.index === parseInt(card.dataset.index) && mem.image === matchingImage)
+        );
+        
+        if (possibleMatch) {
+            card2 = possibleMatch;
+        } else {
+            // Pilih kartu random untuk kartu kedua
+            const remainingCards = unflipped.filter(c => c !== card1);
+            card2 = remainingCards[Math.floor(Math.random() * remainingCards.length)];
+        }
+    } else {
+        // AI tidak tahu pasangan mana pun, pilih 2 kartu random
+        const shuffled = shuffle([...unflipped]);
+        [card1, card2] = shuffled.slice(0, 2);
+    }
+
+    // AI bermain
     flipCard(card1);
     firstCard = card1;
 
@@ -239,6 +367,30 @@ function aiPlay() {
         secondCard = card2;
         checkForMatch();
     }, 800);
+}
+
+function findPotentialMatches(unflippedCards) {
+    const matches = [];
+    const imageCount = {};
+    
+    // Hitung berapa banyak kartu dengan gambar yang sama yang AI ingat
+    aiMemory.forEach(mem => {
+        if (unflippedCards.some(card => parseInt(card.dataset.index) === mem.index)) {
+            imageCount[mem.image] = (imageCount[mem.image] || 0) + 1;
+        }
+    });
+    
+    // Cari gambar yang AI tahu ada 2 atau lebih
+    Object.keys(imageCount).forEach(image => {
+        if (imageCount[image] >= 2) {
+            const cardsWithImage = unflippedCards.filter(card => 
+                aiMemory.some(mem => mem.index === parseInt(card.dataset.index) && mem.image === image)
+            );
+            matches.push(...cardsWithImage.slice(0, 2));
+        }
+    });
+    
+    return matches;
 }
 
 function updateStatus() {
@@ -253,6 +405,7 @@ function updateStatus() {
 
 function checkGameOver() {
     if (playerScore + aiScore === 8) {
+        stopTimer();
         setTimeout(() => {
             let msg = playerScore > aiScore ? "🎉 Selamat! Kamu menang!" :
                      aiScore > playerScore ? "🤖 AI menang! Coba lagi!" : "🤝 Seri! Pertandingan sengit!";
@@ -272,6 +425,8 @@ function resetGame() {
     playerScore = 0;
     aiScore = 0;
     currentPlayer = "Player";
+    aiMemory = [];
+    stopTimer();
     updateStatus();
     createBoard();
 }
